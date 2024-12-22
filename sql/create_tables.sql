@@ -8,10 +8,9 @@ create table if not exists words(
     mean varchar(1024)
 );
 
-
 create table if not exists users(
     id int primary key auto_increment,
-    word varchar(32) unique not null,
+    name varchar(32) unique not null,
     password char(64)
 );
 
