@@ -28,12 +28,14 @@ class Handle(Process):
         self.db = DictSQL()
 
         while True:
-            msg = self.conn.recv(1024).decode().strip()
+            msg = self.conn.recv(1024).decode()
+            # 卫语句，处理退出情况
             if msg == self.flag_dict['exit']:
                 self.conn.close()
                 self.db.close()
                 break
 
+            # 处理具体请求
             request_flag, request_data = msg.split('\t', 1)
             if request_flag == self.flag_dict['login']:
                 name, pwd = request_data.split(' ')
@@ -48,7 +50,7 @@ class Handle(Process):
                 name = request_data
                 self.history(name)
 
-
+    # 处理登录
     def login(self, name, pwd):
         res = self.db.login(name, pwd)
         if res:
@@ -56,12 +58,38 @@ class Handle(Process):
         else:
             self.conn.send(b'F')
 
+    # 处理注册
     def register(self, name, pwd):
         res = self.db.register(name, pwd)
         if res:
             self.conn.send(b'T')
         else:
             self.conn.send(b'F')
+
+    # 处理单词查询
+    def query(self, name, word):
+        res = self.db.query(word)
+        if not res:
+            self.conn.send(b'F')
+            return
+
+        data = f'T\t{res}'.encode()
+        self.conn.send(data)
+        self.db.add_history(name, word)
+
+    # 处理历史记录查询
+    def history(self, name):
+        res = self.db.history(name)
+        if not res:
+            self.conn.send(b'F')
+
+        data = []
+        for index, info_tuple in enumerate(res):
+            info = '\t'.join(map(str, info_tuple))
+            data.append(str(index) + ':\t' + info)
+        data = '\n'.join(data)
+        data = f'T\t{data}'.encode()
+        self.conn.send(data)
 
 
 class WebServer(Process):
